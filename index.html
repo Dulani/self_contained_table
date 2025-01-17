@@ -342,6 +342,12 @@
         ];
         let filteredData = [...tableData];
 
+        // Global variables
+        const minYear = 1979;
+        const maxYear = 2023;
+        let startYear = minYear;
+        let endYear = maxYear;
+        
         // Global variables for pagination
         let currentPage = 1;
         let rowsPerPage = 10;
@@ -479,12 +485,7 @@
                 const track = yearSlider.querySelector('.track');
                 const yearDisplay = document.getElementById('yearDisplay');
                 
-                const minYear = 1979;
-                const maxYear = 2023;
                 const range = maxYear - minYear;
-                
-                let startYear = minYear;
-                let endYear = maxYear;
                 let activeHandle = null;
                 
                 // Initialize handle positions
@@ -679,6 +680,9 @@
             document.querySelectorAll('#lawClassFilters input[type="checkbox"]').forEach(checkbox => {
                 checkbox.checked = true;
             });
+            
+            // Clear search input
+            document.getElementById('searchInput').value = '';
             
             applyFilters();
         }
