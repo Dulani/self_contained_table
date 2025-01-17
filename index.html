@@ -59,9 +59,32 @@
             align-items: center;
             font-size: 0.9em;
             color: #495057;
+            cursor: pointer;
         }
         .checkbox-item input[type="checkbox"] {
             margin-right: 8px;
+        }
+        .checkbox-subgroup {
+            margin-left: 24px;
+            margin-top: 4px;
+        }
+        .checkbox-subgroup .checkbox-item {
+            margin-bottom: 4px;
+        }
+        .law-class-toggle {
+            cursor: pointer;
+            user-select: none;
+            margin-left: 4px;
+        }
+        .law-class-toggle::before {
+            content: '▼';
+            display: inline-block;
+            margin-right: 4px;
+            font-size: 0.8em;
+            transition: transform 0.2s;
+        }
+        .law-class-toggle.collapsed::before {
+            transform: rotate(-90deg);
         }
         .clear-filters {
             width: 100%;
@@ -282,12 +305,31 @@
         let currentSortColumn = null;
         let isAscending = true;
 
-        // Function to handle search
-        function handleSearch(searchTerm) {
+        // Function to apply search filter
+        function applySearchFilter(data, searchTerm) {
+            if (!searchTerm) return data;
             searchTerm = searchTerm.toLowerCase();
-            return tableData.filter(row => 
+            return data.filter(row => 
                 Object.values(row).some(value => 
                     value.toString().toLowerCase().includes(searchTerm)
+                )
+            );
+        }
+
+        // Function to apply year range filter
+        function applyYearFilter(data, yearStart, yearEnd) {
+            return data.filter(row => 
+                parseInt(row.year) >= yearStart && 
+                parseInt(row.year) <= yearEnd
+            );
+        }
+
+        // Function to apply law class and subtype filter
+        function applyLawFilter(data, selectedFilters) {
+            return data.filter(row =>
+                selectedFilters.some(filter => 
+                    filter.lawClass === row.law_class && 
+                    filter.subtype === row.law_class_subtype
                 )
             );
         }
@@ -415,22 +457,86 @@
                     applyFilters(tableData);
                 });
 
-                // Setup law class checkboxes
+                // Setup hierarchical law class checkboxes
                 const lawClassFilters = document.getElementById('lawClassFilters');
-                const uniqueLawClasses = [...new Set(tableData.map(item => item.law_class))].sort();
                 
-                lawClassFilters.innerHTML = uniqueLawClasses.map(lawClass => `
+                // Get unique law classes and their subtypes
+                const lawHierarchy = tableData.reduce((acc, item) => {
+                    if (!acc[item.law_class]) {
+                        acc[item.law_class] = new Set();
+                    }
+                    acc[item.law_class].add(item.law_class_subtype);
+                    return acc;
+                }, {});
+
+                // Convert to sorted array of objects
+                const sortedHierarchy = Object.entries(lawHierarchy)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([lawClass, subtypes]) => ({
+                        lawClass,
+                        subtypes: [...subtypes].sort()
+                    }));
+
+                // Generate HTML for hierarchical checkboxes
+                lawClassFilters.innerHTML = sortedHierarchy.map(({ lawClass, subtypes }) => `
                     <div class="checkbox-item">
                         <label>
-                            <input type="checkbox" value="${lawClass}" checked>
+                            <input type="checkbox" 
+                                   class="law-class-checkbox"
+                                   data-law-class="${lawClass}" 
+                                   checked>
                             ${lawClass}
+                            <span class="law-class-toggle"></span>
                         </label>
+                        <div class="checkbox-subgroup">
+                            ${subtypes.map(subtype => `
+                                <div class="checkbox-item">
+                                    <label>
+                                        <input type="checkbox"
+                                               class="law-subtype-checkbox"
+                                               data-law-class="${lawClass}"
+                                               data-law-subtype="${subtype}"
+                                               checked>
+                                        ${subtype}
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
                 `).join('');
 
-                // Add event listeners to checkboxes
-                lawClassFilters.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                // Setup hierarchical filtering behavior:
+                // 1. Parent (law class) checkboxes control all their subtypes
+                // 2. Checking/unchecking a parent affects all its children
+                // 3. Child (subtype) checkboxes can be individually toggled
+                // 4. Rows are shown if they match ANY selected subtype within their law class
+                
+                // Add event listeners for parent (law class) checkboxes
+                lawClassFilters.querySelectorAll('.law-class-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const lawClass = e.target.dataset.lawClass;
+                        // When a parent is toggled, all its children are toggled to match
+                        const subtypeCheckboxes = lawClassFilters.querySelectorAll(
+                            `.law-subtype-checkbox[data-law-class="${lawClass}"]`
+                        );
+                        subtypeCheckboxes.forEach(sub => sub.checked = e.target.checked);
+                        applyFilters(tableData);
+                    });
+                });
+
+                // Add event listeners for child (subtype) checkboxes
+                // These operate independently, allowing fine-grained control
+                lawClassFilters.querySelectorAll('.law-subtype-checkbox').forEach(checkbox => {
                     checkbox.addEventListener('change', () => applyFilters(tableData));
+                });
+
+                // Add expand/collapse functionality for law class sections
+                lawClassFilters.querySelectorAll('.law-class-toggle').forEach(toggle => {
+                    toggle.addEventListener('click', (e) => {
+                        e.target.classList.toggle('collapsed');
+                        const subgroup = e.target.closest('.checkbox-item').querySelector('.checkbox-subgroup');
+                        subgroup.style.display = e.target.classList.contains('collapsed') ? 'none' : 'block';
+                    });
                 });
 
                 // Setup clear filters button
@@ -533,19 +639,30 @@
             URL.revokeObjectURL(url);
         }
 
-        // Function to apply all filters
+        // Function to apply all filters in sequence
         function applyFilters(data = tableData) {
+            // Get current filter values
             const yearStart = parseInt(document.getElementById('yearStart').value);
             const yearEnd = parseInt(document.getElementById('yearEnd').value);
-            const selectedLawClasses = Array.from(
-                document.querySelectorAll('#lawClassFilters input[type="checkbox"]:checked')
-            ).map(checkbox => checkbox.value);
+            const searchTerm = document.getElementById('searchInput').value;
+            const selectedFilters = Array.from(
+                document.querySelectorAll('#lawClassFilters .law-subtype-checkbox:checked')
+            ).map(checkbox => ({
+                lawClass: checkbox.dataset.lawClass,
+                subtype: checkbox.dataset.lawSubtype
+            }));
 
-            filteredData = data.filter(row => {
-                const yearMatch = parseInt(row.year) >= yearStart && parseInt(row.year) <= yearEnd;
-                const lawClassMatch = selectedLawClasses.length === 0 || selectedLawClasses.includes(row.law_class);
-                return yearMatch && lawClassMatch;
-            });
+            // Apply filters in sequence:
+            // 1. Year range filter (most restrictive first)
+            // 2. Law class/subtype filter (domain-specific filter)
+            // 3. Search filter (most flexible last)
+            let tempData = [...data];
+            tempData = applyYearFilter(tempData, yearStart, yearEnd);
+            tempData = applyLawFilter(tempData, selectedFilters);
+            tempData = applySearchFilter(tempData, searchTerm);
+            
+            // Update filtered data
+            filteredData = tempData;
 
             currentPage = 1;
             renderTable();
