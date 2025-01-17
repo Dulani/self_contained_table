@@ -34,15 +34,51 @@
         .year-range {
             margin-bottom: 15px;
         }
-        .year-range input[type="range"] {
+        .year-range {
+            position: relative;
+            height: 40px;
+            padding: 0 10px;
+        }
+        .year-slider {
+            position: relative;
             width: 100%;
-            margin: 10px 0;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            margin: 20px 0;
+        }
+        .year-slider .track {
+            position: absolute;
+            height: 100%;
+            background: #007bff;
+            border-radius: 2px;
+        }
+        .year-slider .handle {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: #007bff;
+            border-radius: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 2;
+        }
+        .year-slider .handle:hover {
+            background: #0056b3;
         }
         .year-display {
             font-size: 0.9em;
             color: #6c757d;
             text-align: center;
             margin: 5px 0;
+        }
+        .year-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            color: #6c757d;
+            font-size: 0.8em;
         }
         .checkbox-group {
             max-height: 300px;
@@ -175,9 +211,16 @@
         <div class="filter-section">
             <h3>Year Range</h3>
             <div class="year-range">
-                <input type="range" id="yearStart" min="1979" max="2023" value="1979" />
-                <input type="range" id="yearEnd" min="1979" max="2023" value="2023" />
+                <div class="year-slider" id="yearSlider">
+                    <div class="track"></div>
+                    <div class="handle" id="startHandle"></div>
+                    <div class="handle" id="endHandle"></div>
+                </div>
                 <div class="year-display" id="yearDisplay">1979 - 2023</div>
+                <div class="year-labels">
+                    <span>1979</span>
+                    <span>2023</span>
+                </div>
             </div>
         </div>
 
@@ -282,16 +325,6 @@
         let currentSortColumn = null;
         let isAscending = true;
 
-        // Function to handle search
-        function handleSearch(searchTerm) {
-            searchTerm = searchTerm.toLowerCase();
-            return tableData.filter(row => 
-                Object.values(row).some(value => 
-                    value.toString().toLowerCase().includes(searchTerm)
-                )
-            );
-        }
-
         // Function to sort data
         function sortData(data, column) {
             return [...data].sort((a, b) => {
@@ -388,32 +421,79 @@
         // Function to setup interactive controls
         function setupControls() {
             if (tableData.length > 0) {
-                // Setup year range controls
-                const yearStart = document.getElementById('yearStart');
-                const yearEnd = document.getElementById('yearEnd');
+                // Setup year range slider
+                const yearSlider = document.getElementById('yearSlider');
+                const startHandle = document.getElementById('startHandle');
+                const endHandle = document.getElementById('endHandle');
+                const track = yearSlider.querySelector('.track');
                 const yearDisplay = document.getElementById('yearDisplay');
-
-                yearStart.addEventListener('input', function() {
-                    let start = parseInt(yearStart.value);
-                    let end = parseInt(yearEnd.value);
-                    if (start > end) {
-                        end = start;
-                        yearEnd.value = end;
+                
+                const minYear = 1979;
+                const maxYear = 2023;
+                const range = maxYear - minYear;
+                
+                let startYear = minYear;
+                let endYear = maxYear;
+                let activeHandle = null;
+                
+                // Initialize handle positions
+                function updateHandlePositions() {
+                    const startPos = ((startYear - minYear) / range) * 100;
+                    const endPos = ((endYear - minYear) / range) * 100;
+                    startHandle.style.left = startPos + '%';
+                    endHandle.style.left = endPos + '%';
+                    track.style.left = startPos + '%';
+                    track.style.width = (endPos - startPos) + '%';
+                    yearDisplay.textContent = `${startYear} - ${endYear}`;
+                }
+                
+                // Convert position to year
+                function positionToYear(position) {
+                    const rect = yearSlider.getBoundingClientRect();
+                    const percent = Math.max(0, Math.min(1, (position - rect.left) / rect.width));
+                    return Math.round(minYear + percent * range);
+                }
+                
+                // Handle mouse events
+                yearSlider.addEventListener('mousedown', function(e) {
+                    const startPos = ((startYear - minYear) / range) * yearSlider.offsetWidth;
+                    const endPos = ((endYear - minYear) / range) * yearSlider.offsetWidth;
+                    const clickPos = e.clientX - yearSlider.getBoundingClientRect().left;
+                    
+                    // Determine which handle to drag based on closest distance
+                    if (Math.abs(clickPos - startPos) < Math.abs(clickPos - endPos)) {
+                        activeHandle = startHandle;
+                    } else {
+                        activeHandle = endHandle;
                     }
-                    yearDisplay.textContent = `${start} - ${end}`;
-                    applyFilters(tableData);
+                    
+                    document.addEventListener('mousemove', handleDrag);
+                    document.addEventListener('mouseup', stopDrag);
                 });
-
-                yearEnd.addEventListener('input', function() {
-                    let start = parseInt(yearStart.value);
-                    let end = parseInt(yearEnd.value);
-                    if (end < start) {
-                        start = end;
-                        yearStart.value = start;
+                
+                function handleDrag(e) {
+                    if (!activeHandle) return;
+                    
+                    const year = positionToYear(e.clientX);
+                    
+                    if (activeHandle === startHandle) {
+                        startYear = Math.min(endYear, Math.max(minYear, year));
+                    } else {
+                        endYear = Math.max(startYear, Math.min(maxYear, year));
                     }
-                    yearDisplay.textContent = `${start} - ${end}`;
-                    applyFilters(tableData);
-                });
+                    
+                    updateHandlePositions();
+                    applyFilters();
+                }
+                
+                function stopDrag() {
+                    activeHandle = null;
+                    document.removeEventListener('mousemove', handleDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
+                
+                // Initialize slider
+                updateHandlePositions();
 
                 // Setup law class checkboxes
                 const lawClassFilters = document.getElementById('lawClassFilters');
@@ -441,12 +521,8 @@
 
                 // Setup search input
                 const searchInput = document.getElementById('searchInput');
-                searchInput.addEventListener('input', (e) => {
-                    const searchResults = handleSearch(e.target.value);
-                    filteredData = applyFilters(searchResults);
-                    currentPage = 1;
-                    renderTable();
-                    updatePaginationControls();
+                searchInput.addEventListener('input', () => {
+                    applyFilters();
                 });
 
                 // Setup pagination controls
@@ -481,9 +557,9 @@
 
         // Function to clear all filters
         function clearFilters() {
-            document.getElementById('yearStart').value = 1979;
-            document.getElementById('yearEnd').value = 2023;
-            document.getElementById('yearDisplay').textContent = '1979 - 2023';
+            startYear = minYear;
+            endYear = maxYear;
+            updateHandlePositions();
             
             document.querySelectorAll('#lawClassFilters input[type="checkbox"]').forEach(checkbox => {
                 checkbox.checked = true;
@@ -533,19 +609,38 @@
             URL.revokeObjectURL(url);
         }
 
+        // Function to apply year filter
+        function applyYearFilter(data, start, end) {
+            return data.filter(row => {
+                const year = parseInt(row.year);
+                return year >= start && year <= end;
+            });
+        }
+
         // Function to apply all filters
         function applyFilters(data = tableData) {
-            const yearStart = parseInt(document.getElementById('yearStart').value);
-            const yearEnd = parseInt(document.getElementById('yearEnd').value);
+            // Apply year filter
+            let filtered = applyYearFilter(data, startYear, endYear);
+
+            // Apply law class filter
             const selectedLawClasses = Array.from(
                 document.querySelectorAll('#lawClassFilters input[type="checkbox"]:checked')
             ).map(checkbox => checkbox.value);
+            if (selectedLawClasses.length > 0) {
+                filtered = filtered.filter(row => selectedLawClasses.includes(row.law_class));
+            }
 
-            filteredData = data.filter(row => {
-                const yearMatch = parseInt(row.year) >= yearStart && parseInt(row.year) <= yearEnd;
-                const lawClassMatch = selectedLawClasses.length === 0 || selectedLawClasses.includes(row.law_class);
-                return yearMatch && lawClassMatch;
-            });
+            // Apply search filter
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(row =>
+                    Object.values(row).some(value => 
+                        String(value).toLowerCase().includes(searchTerm)
+                    )
+                );
+            }
+
+            filteredData = filtered;
 
             currentPage = 1;
             renderTable();
