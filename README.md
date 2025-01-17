@@ -1,2 +1,2 @@
 # self_contiained_table
-A single page interactive self-contained table webpage.
+A single page interactive self-contained table webpage (generated mostly by Devin.ai).
