@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Table</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls" id="tableControls">
+        <!-- Interactive controls will be added here -->
+    </div>
+
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <!-- Table headers will be dynamically populated -->
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Table data will be dynamically populated -->
+        </tbody>
+    </table>
+
+    <script>
+        // Main data store
+        let tableData = [];
+        let filteredData = [];
+
+        // Function to fetch data
+        async function fetchData() {
+            try {
+                // Data URL will be configured based on requirements
+                const response = await fetch('data.json');
+                tableData = await response.json();
+                filteredData = [...tableData];
+                renderTable();
+                setupControls();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Function to render the table
+        function renderTable() {
+            const thead = document.querySelector('#dataTable thead tr');
+            const tbody = document.querySelector('#dataTable tbody');
+            
+            // Clear existing content
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            // If we have data, render the table
+            if (filteredData.length > 0) {
+                // Add headers
+                Object.keys(filteredData[0]).forEach(key => {
+                    thead.innerHTML += `<th>${key}</th>`;
+                });
+
+                // Add data rows
+                filteredData.forEach(row => {
+                    const tr = document.createElement('tr');
+                    Object.values(row).forEach(value => {
+                        tr.innerHTML += `<td>${value}</td>`;
+                    });
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // Function to setup interactive controls
+        function setupControls() {
+            // Controls will be added based on data structure
+            const controls = document.getElementById('tableControls');
+            controls.innerHTML = ''; // Clear existing controls
+            
+            // Example control setup - will be customized based on requirements
+            if (tableData.length > 0) {
+                const columns = Object.keys(tableData[0]);
+                // Add filter controls for each column
+                columns.forEach(column => {
+                    const values = [...new Set(tableData.map(item => item[column]))];
+                    if (values.length > 0) {
+                        const select = document.createElement('select');
+                        select.innerHTML = `
+                            <option value="">Filter ${column}</option>
+                            ${values.map(value => `<option value="${value}">${value}</option>`).join('')}
+                        `;
+                        select.addEventListener('change', (e) => filterTable(column, e.target.value));
+                        controls.appendChild(select);
+                    }
+                });
+            }
+        }
+
+        // Function to filter table data
+        function filterTable(column, value) {
+            if (value === '') {
+                filteredData = [...tableData];
+            } else {
+                filteredData = tableData.filter(row => row[column].toString() === value);
+            }
+            renderTable();
+        }
+
+        // Initialize the table
+        document.addEventListener('DOMContentLoaded', fetchData);
+    </script>
+</body>
+</html>
