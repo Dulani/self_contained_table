@@ -109,6 +109,65 @@
         .download-btn:hover {
             background-color: #218838;
         }
+        .table-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        .search-box {
+            flex: 1;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .pagination-controls select {
+            padding: 6px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .pagination-controls button {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+        }
+        .pagination-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination-controls span {
+            color: #6c757d;
+        }
+        th {
+            cursor: pointer;
+            user-select: none;
+        }
+        th::after {
+            content: '↕';
+            margin-left: 5px;
+            opacity: 0.3;
+        }
+        th.sort-asc::after {
+            content: '↑';
+            opacity: 1;
+        }
+        th.sort-desc::after {
+            content: '↓';
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -133,7 +192,23 @@
     </div>
 
     <div class="main-content">
-        <button class="download-btn" id="downloadData">Download Data</button>
+        <div class="table-controls">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search across all columns...">
+            </div>
+            <div class="pagination-controls">
+                <select id="entriesPerPage">
+                    <option value="5">5 per page</option>
+                    <option value="10" selected>10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                </select>
+                <button id="prevPage" disabled>Previous</button>
+                <span id="pageInfo">Page 1 of 1</span>
+                <button id="nextPage" disabled>Next</button>
+            </div>
+            <button class="download-btn" id="downloadData">Download Data</button>
+        </div>
         <table id="dataTable">
         <thead>
             <tr>
@@ -146,22 +221,111 @@
     </table>
 
     <script>
-        // Main data store
-        let tableData = [];
-        let filteredData = [];
-
-        // Function to fetch data
-        async function fetchData() {
-            try {
-                // Data URL will be configured based on requirements
-                const response = await fetch('data.json');
-                tableData = await response.json();
-                filteredData = [...tableData];
-                renderTable();
-                setupControls();
-            } catch (error) {
-                console.error('Error fetching data:', error);
+        // Embedded data
+        const tableData = [
+            {
+                "state": "California",
+                "state_abb": "CA",
+                "fips": "06",
+                "year": 1985,
+                "year_frac": 1985.0,
+                "law_class": "Background Checks",
+                "law_class_subtype": "Private Sales",
+                "handguns_or_long_guns": "Handguns"
+            },
+            {
+                "state": "California",
+                "state_abb": "CA",
+                "fips": "06",
+                "year": 1990,
+                "year_frac": 1990.0,
+                "law_class": "CCW",
+                "law_class_subtype": "Shall Issue",
+                "handguns_or_long_guns": "Handguns"
+            },
+            {
+                "state": "Texas",
+                "state_abb": "TX",
+                "fips": "48",
+                "year": 1995,
+                "year_frac": 1995.0,
+                "law_class": "Background Checks",
+                "law_class_subtype": "Dealer Sales",
+                "handguns_or_long_guns": "All"
+            },
+            {
+                "state": "New York",
+                "state_abb": "NY",
+                "fips": "36",
+                "year": 2000,
+                "year_frac": 2000.0,
+                "law_class": "Assault Weapons",
+                "law_class_subtype": "Ban",
+                "handguns_or_long_guns": "Long Guns"
+            },
+            {
+                "state": "Florida",
+                "state_abb": "FL",
+                "fips": "12",
+                "year": 2005,
+                "year_frac": 2005.0,
+                "law_class": "Stand Your Ground",
+                "law_class_subtype": "Castle Doctrine",
+                "handguns_or_long_guns": "All"
             }
+        ];
+        let filteredData = [...tableData];
+
+        // Global variables for pagination
+        let currentPage = 1;
+        let rowsPerPage = 10;
+        let currentSortColumn = null;
+        let isAscending = true;
+
+        // Function to handle search
+        function handleSearch(searchTerm) {
+            searchTerm = searchTerm.toLowerCase();
+            return tableData.filter(row => 
+                Object.values(row).some(value => 
+                    value.toString().toLowerCase().includes(searchTerm)
+                )
+            );
+        }
+
+        // Function to sort data
+        function sortData(data, column) {
+            return [...data].sort((a, b) => {
+                const aVal = a[column];
+                const bVal = b[column];
+                
+                if (typeof aVal === 'number') {
+                    return isAscending ? aVal - bVal : bVal - aVal;
+                }
+                
+                return isAscending 
+                    ? aVal.toString().localeCompare(bVal.toString())
+                    : bVal.toString().localeCompare(aVal.toString());
+            });
+        }
+
+        // Function to handle pagination
+        function paginate(data) {
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            return data.slice(startIndex, startIndex + rowsPerPage);
+        }
+
+        // Function to update pagination controls
+        function updatePaginationControls() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+        }
+
+        // Initialize the table and controls
+        function initialize() {
+            renderTable();
+            setupControls();
         }
 
         // Function to render the table
@@ -175,13 +339,43 @@
 
             // If we have data, render the table
             if (filteredData.length > 0) {
-                // Add headers
+                // Add headers with sort functionality
                 Object.keys(filteredData[0]).forEach(key => {
-                    thead.innerHTML += `<th>${key}</th>`;
+                    const th = document.createElement('th');
+                    th.textContent = key;
+                    th.addEventListener('click', () => {
+                        if (currentSortColumn === key) {
+                            isAscending = !isAscending;
+                        } else {
+                            currentSortColumn = key;
+                            isAscending = true;
+                        }
+                        
+                        // Remove sort classes from all headers
+                        thead.querySelectorAll('th').forEach(header => {
+                            header.classList.remove('sort-asc', 'sort-desc');
+                        });
+                        
+                        // Add sort class to current header
+                        th.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+                        
+                        // Sort and render
+                        filteredData = sortData(filteredData, key);
+                        renderTable();
+                    });
+                    
+                    if (currentSortColumn === key) {
+                        th.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+                    }
+                    
+                    thead.appendChild(th);
                 });
 
+                // Get paginated data
+                const paginatedData = paginate(filteredData);
+
                 // Add data rows
-                filteredData.forEach(row => {
+                paginatedData.forEach(row => {
                     const tr = document.createElement('tr');
                     Object.values(row).forEach(value => {
                         tr.innerHTML += `<td>${value}</td>`;
@@ -200,19 +394,25 @@
                 const yearDisplay = document.getElementById('yearDisplay');
 
                 yearStart.addEventListener('input', function() {
-                    if (parseInt(yearStart.value) > parseInt(yearEnd.value)) {
-                        yearEnd.value = yearStart.value;
+                    let start = parseInt(yearStart.value);
+                    let end = parseInt(yearEnd.value);
+                    if (start > end) {
+                        end = start;
+                        yearEnd.value = end;
                     }
-                    yearDisplay.textContent = `${yearStart.value} - ${yearEnd.value}`;
-                    applyFilters();
+                    yearDisplay.textContent = `${start} - ${end}`;
+                    applyFilters(tableData);
                 });
 
                 yearEnd.addEventListener('input', function() {
-                    if (parseInt(yearEnd.value) < parseInt(yearStart.value)) {
-                        yearStart.value = yearEnd.value;
+                    let start = parseInt(yearStart.value);
+                    let end = parseInt(yearEnd.value);
+                    if (end < start) {
+                        start = end;
+                        yearStart.value = start;
                     }
-                    yearDisplay.textContent = `${yearStart.value} - ${yearEnd.value}`;
-                    applyFilters();
+                    yearDisplay.textContent = `${start} - ${end}`;
+                    applyFilters(tableData);
                 });
 
                 // Setup law class checkboxes
@@ -230,7 +430,7 @@
 
                 // Add event listeners to checkboxes
                 lawClassFilters.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.addEventListener('change', applyFilters);
+                    checkbox.addEventListener('change', () => applyFilters(tableData));
                 });
 
                 // Setup clear filters button
@@ -238,6 +438,44 @@
 
                 // Setup download button
                 document.getElementById('downloadData').addEventListener('click', downloadData);
+
+                // Setup search input
+                const searchInput = document.getElementById('searchInput');
+                searchInput.addEventListener('input', (e) => {
+                    const searchResults = handleSearch(e.target.value);
+                    filteredData = applyFilters(searchResults);
+                    currentPage = 1;
+                    renderTable();
+                    updatePaginationControls();
+                });
+
+                // Setup pagination controls
+                document.getElementById('entriesPerPage').addEventListener('change', (e) => {
+                    rowsPerPage = parseInt(e.target.value);
+                    currentPage = 1;
+                    renderTable();
+                    updatePaginationControls();
+                });
+
+                document.getElementById('prevPage').addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderTable();
+                        updatePaginationControls();
+                    }
+                });
+
+                document.getElementById('nextPage').addEventListener('click', () => {
+                    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderTable();
+                        updatePaginationControls();
+                    }
+                });
+
+                // Initial pagination setup
+                updatePaginationControls();
             }
         }
 
@@ -256,17 +494,39 @@
 
         // Function to download filtered data as CSV
         function downloadData() {
-            const headers = Object.keys(filteredData[0]);
+            // Get current filtered and sorted data
+            const dataToExport = currentSortColumn 
+                ? sortData(filteredData, currentSortColumn)
+                : filteredData;
+
+            // Prepare CSV data
+            const headers = Object.keys(dataToExport[0]);
             const csvRows = [
+                // Add headers
                 headers.join(','),
-                ...filteredData.map(row => headers.map(header => JSON.stringify(row[header])).join(','))
+                // Add data rows with proper CSV escaping
+                ...dataToExport.map(row => 
+                    headers.map(header => {
+                        const value = row[header];
+                        // Handle different data types and escape special characters
+                        if (typeof value === 'string') {
+                            // Escape quotes and wrap in quotes if contains special chars
+                            const escaped = value.replace(/"/g, '""');
+                            return /[,"\n\r]/.test(value) ? `"${escaped}"` : value;
+                        }
+                        return value;
+                    }).join(',')
+                )
             ];
+
+            // Create and download the file
             const csvString = csvRows.join('\n');
-            const blob = new Blob([csvString], { type: 'text/csv' });
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             link.href = url;
-            link.download = 'filtered_law_data.csv';
+            link.download = `law_database_${timestamp}.csv`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -274,24 +534,26 @@
         }
 
         // Function to apply all filters
-        function applyFilters() {
+        function applyFilters(data = tableData) {
             const yearStart = parseInt(document.getElementById('yearStart').value);
             const yearEnd = parseInt(document.getElementById('yearEnd').value);
             const selectedLawClasses = Array.from(
                 document.querySelectorAll('#lawClassFilters input[type="checkbox"]:checked')
             ).map(checkbox => checkbox.value);
 
-            filteredData = tableData.filter(row => {
-                const yearMatch = row.year >= yearStart && row.year <= yearEnd;
-                const lawClassMatch = selectedLawClasses.includes(row.law_class);
+            filteredData = data.filter(row => {
+                const yearMatch = parseInt(row.year) >= yearStart && parseInt(row.year) <= yearEnd;
+                const lawClassMatch = selectedLawClasses.length === 0 || selectedLawClasses.includes(row.law_class);
                 return yearMatch && lawClassMatch;
             });
 
+            currentPage = 1;
             renderTable();
+            updatePaginationControls();
         }
 
         // Initialize the table
-        document.addEventListener('DOMContentLoaded', fetchData);
+        document.addEventListener('DOMContentLoaded', initialize);
     </script>
 </body>
 </html>
