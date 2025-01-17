@@ -7,27 +7,89 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 300px;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #dee2e6;
+        }
+        .main-content {
+            flex: 1;
             padding: 20px;
         }
-        .controls {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
+        .filter-section {
+            margin-bottom: 25px;
+        }
+        .filter-section h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #212529;
+            font-size: 1.1em;
+        }
+        .year-range {
+            margin-bottom: 15px;
+        }
+        .year-range input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .year-display {
+            font-size: 0.9em;
+            color: #6c757d;
+            text-align: center;
+            margin: 5px 0;
+        }
+        .checkbox-group {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        .checkbox-item {
+            margin-bottom: 8px;
+        }
+        .checkbox-item label {
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+            color: #495057;
+        }
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .clear-filters {
+            width: 100%;
+            padding: 8px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .clear-filters:hover {
+            background-color: #5a6268;
         }
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            background-color: white;
         }
         th, td {
             padding: 12px;
             text-align: left;
-            border: 1px solid #ddd;
+            border: 1px solid #dee2e6;
         }
         th {
             background-color: #f8f9fa;
+            font-weight: 600;
         }
         tr:nth-child(even) {
             background-color: #f8f9fa;
@@ -35,14 +97,44 @@
         tr:hover {
             background-color: #f2f2f2;
         }
+        .download-btn {
+            padding: 8px 16px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .download-btn:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
-    <div class="controls" id="tableControls">
-        <!-- Interactive controls will be added here -->
+    <div class="sidebar">
+        <div class="filter-section">
+            <h3>Year Range</h3>
+            <div class="year-range">
+                <input type="range" id="yearStart" min="1979" max="2023" value="1979" />
+                <input type="range" id="yearEnd" min="1979" max="2023" value="2023" />
+                <div class="year-display" id="yearDisplay">1979 - 2023</div>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <h3>Filter by Law Class</h3>
+            <div class="checkbox-group" id="lawClassFilters">
+                <!-- Law class checkboxes will be dynamically added here -->
+            </div>
+        </div>
+
+        <button class="clear-filters" id="clearFilters">Clear Filters</button>
     </div>
 
-    <table id="dataTable">
+    <div class="main-content">
+        <button class="download-btn" id="downloadData">Download Data</button>
+        <table id="dataTable">
         <thead>
             <tr>
                 <!-- Table headers will be dynamically populated -->
@@ -101,36 +193,100 @@
 
         // Function to setup interactive controls
         function setupControls() {
-            // Controls will be added based on data structure
-            const controls = document.getElementById('tableControls');
-            controls.innerHTML = ''; // Clear existing controls
-            
-            // Example control setup - will be customized based on requirements
             if (tableData.length > 0) {
-                const columns = Object.keys(tableData[0]);
-                // Add filter controls for each column
-                columns.forEach(column => {
-                    const values = [...new Set(tableData.map(item => item[column]))];
-                    if (values.length > 0) {
-                        const select = document.createElement('select');
-                        select.innerHTML = `
-                            <option value="">Filter ${column}</option>
-                            ${values.map(value => `<option value="${value}">${value}</option>`).join('')}
-                        `;
-                        select.addEventListener('change', (e) => filterTable(column, e.target.value));
-                        controls.appendChild(select);
+                // Setup year range controls
+                const yearStart = document.getElementById('yearStart');
+                const yearEnd = document.getElementById('yearEnd');
+                const yearDisplay = document.getElementById('yearDisplay');
+
+                yearStart.addEventListener('input', function() {
+                    if (parseInt(yearStart.value) > parseInt(yearEnd.value)) {
+                        yearEnd.value = yearStart.value;
                     }
+                    yearDisplay.textContent = `${yearStart.value} - ${yearEnd.value}`;
+                    applyFilters();
                 });
+
+                yearEnd.addEventListener('input', function() {
+                    if (parseInt(yearEnd.value) < parseInt(yearStart.value)) {
+                        yearStart.value = yearEnd.value;
+                    }
+                    yearDisplay.textContent = `${yearStart.value} - ${yearEnd.value}`;
+                    applyFilters();
+                });
+
+                // Setup law class checkboxes
+                const lawClassFilters = document.getElementById('lawClassFilters');
+                const uniqueLawClasses = [...new Set(tableData.map(item => item.law_class))].sort();
+                
+                lawClassFilters.innerHTML = uniqueLawClasses.map(lawClass => `
+                    <div class="checkbox-item">
+                        <label>
+                            <input type="checkbox" value="${lawClass}" checked>
+                            ${lawClass}
+                        </label>
+                    </div>
+                `).join('');
+
+                // Add event listeners to checkboxes
+                lawClassFilters.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', applyFilters);
+                });
+
+                // Setup clear filters button
+                document.getElementById('clearFilters').addEventListener('click', clearFilters);
+
+                // Setup download button
+                document.getElementById('downloadData').addEventListener('click', downloadData);
             }
         }
 
-        // Function to filter table data
-        function filterTable(column, value) {
-            if (value === '') {
-                filteredData = [...tableData];
-            } else {
-                filteredData = tableData.filter(row => row[column].toString() === value);
-            }
+        // Function to clear all filters
+        function clearFilters() {
+            document.getElementById('yearStart').value = 1979;
+            document.getElementById('yearEnd').value = 2023;
+            document.getElementById('yearDisplay').textContent = '1979 - 2023';
+            
+            document.querySelectorAll('#lawClassFilters input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            
+            applyFilters();
+        }
+
+        // Function to download filtered data as CSV
+        function downloadData() {
+            const headers = Object.keys(filteredData[0]);
+            const csvRows = [
+                headers.join(','),
+                ...filteredData.map(row => headers.map(header => JSON.stringify(row[header])).join(','))
+            ];
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'filtered_law_data.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Function to apply all filters
+        function applyFilters() {
+            const yearStart = parseInt(document.getElementById('yearStart').value);
+            const yearEnd = parseInt(document.getElementById('yearEnd').value);
+            const selectedLawClasses = Array.from(
+                document.querySelectorAll('#lawClassFilters input[type="checkbox"]:checked')
+            ).map(checkbox => checkbox.value);
+
+            filteredData = tableData.filter(row => {
+                const yearMatch = row.year >= yearStart && row.year <= yearEnd;
+                const lawClassMatch = selectedLawClasses.includes(row.law_class);
+                return yearMatch && lawClassMatch;
+            });
+
             renderTable();
         }
 
