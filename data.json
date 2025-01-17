@@ -1,37 +1,102 @@
 [
   {
-    "id": 1,
-    "name": "Product A",
-    "category": "Electronics",
-    "price": 299.99,
-    "stock": 50
+    "state": "California",
+    "state_abb": "CA",
+    "fips": "06",
+    "year": 1985,
+    "year_frac": 1985.0,
+    "law_class": "Background Checks",
+    "law_class_subtype": "Private Sales",
+    "handguns_or_long_guns": "Handguns"
   },
   {
-    "id": 2,
-    "name": "Product B",
-    "category": "Clothing",
-    "price": 49.99,
-    "stock": 100
+    "state": "California",
+    "state_abb": "CA",
+    "fips": "06",
+    "year": 1990,
+    "year_frac": 1990.0,
+    "law_class": "CCW",
+    "law_class_subtype": "Shall Issue",
+    "handguns_or_long_guns": "Handguns"
   },
   {
-    "id": 3,
-    "name": "Product C",
-    "category": "Electronics",
-    "price": 199.99,
-    "stock": 25
+    "state": "Texas",
+    "state_abb": "TX",
+    "fips": "48",
+    "year": 1995,
+    "year_frac": 1995.0,
+    "law_class": "Background Checks",
+    "law_class_subtype": "Dealer Sales",
+    "handguns_or_long_guns": "All"
   },
   {
-    "id": 4,
-    "name": "Product D",
-    "category": "Books",
-    "price": 19.99,
-    "stock": 200
+    "state": "New York",
+    "state_abb": "NY",
+    "fips": "36",
+    "year": 2000,
+    "year_frac": 2000.0,
+    "law_class": "Assault Weapons",
+    "law_class_subtype": "Ban",
+    "handguns_or_long_guns": "Long Guns"
   },
   {
-    "id": 5,
-    "name": "Product E",
-    "category": "Clothing",
-    "price": 79.99,
-    "stock": 75
+    "state": "Florida",
+    "state_abb": "FL",
+    "fips": "12",
+    "year": 2005,
+    "year_frac": 2005.0,
+    "law_class": "Stand Your Ground",
+    "law_class_subtype": "Castle Doctrine",
+    "handguns_or_long_guns": "All"
+  },
+  {
+    "state": "Washington",
+    "state_abb": "WA",
+    "fips": "53",
+    "year": 2010,
+    "year_frac": 2010.0,
+    "law_class": "Background Checks",
+    "law_class_subtype": "Universal",
+    "handguns_or_long_guns": "All"
+  },
+  {
+    "state": "Texas",
+    "state_abb": "TX",
+    "fips": "48",
+    "year": 2015,
+    "year_frac": 2015.0,
+    "law_class": "CCW",
+    "law_class_subtype": "Constitutional Carry",
+    "handguns_or_long_guns": "Handguns"
+  },
+  {
+    "state": "California",
+    "state_abb": "CA",
+    "fips": "06",
+    "year": 2020,
+    "year_frac": 2020.0,
+    "law_class": "Red Flag",
+    "law_class_subtype": "ERPO",
+    "handguns_or_long_guns": "All"
+  },
+  {
+    "state": "Florida",
+    "state_abb": "FL",
+    "fips": "12",
+    "year": 2018,
+    "year_frac": 2018.0,
+    "law_class": "Red Flag",
+    "law_class_subtype": "ERPO",
+    "handguns_or_long_guns": "All"
+  },
+  {
+    "state": "New York",
+    "state_abb": "NY",
+    "fips": "36",
+    "year": 2019,
+    "year_frac": 2019.0,
+    "law_class": "Safe Storage",
+    "law_class_subtype": "All Firearms",
+    "handguns_or_long_guns": "All"
   }
 ]
