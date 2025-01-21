@@ -3,7 +3,7 @@ const { computeYearFraction } = require('./generateYearlyData');
 
 function assertClose(actual, expected, message) {
     const diff = Math.abs(actual - expected);
-    if (diff > 0.001) {
+    if (diff > 0.01) {  // Updated tolerance to 0.01 per user request
         console.error(`❌ ${message}: Expected ${expected}, got ${actual}`);
         process.exit(1);
     }
@@ -37,8 +37,8 @@ assertClose(
 console.log('\nTesting Alaska castle doctrine example:');
 assertClose(
     computeYearFraction('2006-01-01', '2006-09-13', 2006),
-    0.701,
-    'Alaska 2006 should be ~0.701'
+    0.70,
+    'Alaska 2006 should be 0.70'
 );
 
 // Verify edge cases
@@ -55,6 +55,6 @@ assertClose(
 );
 assertClose(
     computeYearFraction('2004-03-01', '2004-06-30', 2004),
-    0.333,
-    'Leap year Q2 should be ~0.333'
+    0.33,
+    'Leap year Q2 should be 0.33'
 );

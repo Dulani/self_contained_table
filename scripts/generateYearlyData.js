@@ -46,8 +46,8 @@ function computeYearFraction(effectiveStr, supersededStr, year) {
         return Math.round(fraction * 4) / 4;
     }
     
-    // For other cases, use 3 decimal precision
-    return Math.round(fraction * 1000) / 1000;
+    // For other cases, use 2 decimal precision as per requirements
+    return Math.round(fraction * 100) / 100;
 }
 
 // Function to generate rows for a single law across all years
