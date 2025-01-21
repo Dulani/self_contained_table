@@ -1,2 +1,2 @@
-# self_contiained_table
-A single page interactive self-contained table webpage (generated mostly by Devin.ai).
+# standalone_interactive_table
+A single page self-contained (static hosted) interactive table webpage (generated primarily by Devin.ai).
